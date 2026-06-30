@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>바나나 밭</title>
+    <link rel="stylesheet" href="styles.css?v=banana-mobile-2" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Idle Banana Farm</p>
+          <h1>바나나 밭</h1>
+        </div>
+        <div class="top-actions">
+          <div class="stats" aria-label="게임 상태">
+            <div class="stat" title="코인" aria-label="코인">
+              <span class="stat-icon" aria-hidden="true">C</span>
+              <strong id="coins">0</strong>
+            </div>
+            <div class="stat" title="깐 바나나" aria-label="깐 바나나">
+              <span class="stat-icon" aria-hidden="true">◒</span>
+              <strong id="totalPeels">0</strong>
+            </div>
+            <div class="stat" title="판매함" aria-label="판매함">
+              <span class="stat-icon" aria-hidden="true">$</span>
+              <strong id="sellCrate">0개</strong>
+            </div>
+            <div class="stat" title="가방: 수확 바나나 18칸 한도" aria-label="가방: 수확 바나나 18칸 한도">
+              <span class="stat-icon" aria-hidden="true">▣</span>
+              <strong id="streak">0/18</strong>
+            </div>
+            <div class="stat" title="도감" aria-label="도감">
+              <span class="stat-icon" aria-hidden="true">★</span>
+              <strong id="collectionCount">0/18</strong>
+            </div>
+            <div class="stat" title="자동화 총 레벨" aria-label="자동화 총 레벨">
+              <span class="stat-icon" aria-hidden="true">⚙</span>
+              <strong id="automationCount">0단계</strong>
+            </div>
+          </div>
+          <button id="openUpgradeButton" class="open-upgrade" type="button">업그레이드</button>
+        </div>
+      </header>
+
+      <section class="layout">
+        <section class="stage-panel" aria-label="바나나 농장 게임">
+          <canvas id="game" width="960" height="640"></canvas>
+          <button id="touchActionButton" class="touch-action-button" type="button">작업</button>
+          <div class="stage-footer">
+            <div class="meter-head">
+              <span>슈퍼바나나 보장 게이지</span>
+              <strong id="superEta">약 120분</strong>
+            </div>
+            <div class="meter" aria-label="슈퍼바나나 보장 게이지">
+              <div id="superGauge" class="meter-fill"></div>
+            </div>
+            <div class="farm-help">
+              <span class="desktop-help">WASD 이동</span>
+              <span class="desktop-help">Space 현재 위치 작업</span>
+              <span class="desktop-help">판매대/까기대 앞에서 Space</span>
+              <span class="mobile-help">터치 이동</span>
+              <span class="mobile-help">작업 버튼 현재 위치 작업</span>
+              <span class="mobile-help">까기대에서는 길게 누르기</span>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="upgradeOverlay" class="upgrade-overlay" hidden>
+      <aside class="side-panel upgrade-modal" aria-label="업그레이드와 기록">
+        <div class="upgrade-title">
+          <div>
+            <p class="eyebrow">Farm Control</p>
+            <h2>농장 업그레이드</h2>
+          </div>
+          <button id="closeUpgradeButton" type="button">닫기</button>
+        </div>
+
+        <div class="message" id="message">초반은 손으로 갈고 심고 물 주고 수확합니다.</div>
+
+        <section class="shop-panel market-panel">
+          <div class="section-head">
+            <h2>판매와 묘목</h2>
+            <span id="saveState">자동 저장</span>
+          </div>
+          <div class="market-row">
+            <button id="sellButton" type="button">판매함 전부 팔기</button>
+            <button id="seedButton" type="button">묘목 레벨업</button>
+          </div>
+          <div class="limit-row" aria-label="보관 한도">
+            <span>가방 18칸</span>
+            <span>묘목 재고는 심으면 1개 사용</span>
+            <span>바나나 3개 까면 묘목 +1</span>
+            <span>묘목 레벨은 새로 심는 나무부터 적용</span>
+            <span>기존 나무는 재식재 비용 필요</span>
+          </div>
+        </section>
+
+        <section class="shop-panel farm-upgrade-panel">
+          <div class="section-head">
+            <h2>농장 레벨</h2>
+            <span>바나나 가치와 품종 확률</span>
+          </div>
+          <div class="upgrade-grid">
+            <button class="upgrade-btn" data-upgrade="banana" type="button"></button>
+            <button class="upgrade-btn" data-upgrade="seedling" type="button"></button>
+          </div>
+        </section>
+
+        <section class="shop-panel automation-panel">
+          <div class="section-head">
+            <h2>자동화 레벨</h2>
+            <span>장비별로 따로 강화</span>
+          </div>
+          <div id="shopList" class="shop-grid">
+            <button class="shop-btn" data-shop="tiller" type="button"></button>
+            <button class="shop-btn" data-shop="planter" type="button"></button>
+            <button class="shop-btn" data-shop="sprinkler" type="button"></button>
+            <button class="shop-btn" data-shop="harvester" type="button"></button>
+            <button class="shop-btn" data-shop="peeler" type="button"></button>
+            <button class="shop-btn" data-shop="seller" type="button"></button>
+          </div>
+        </section>
+
+        <section class="recent-panel">
+          <p class="panel-label">방금 깐 바나나</p>
+          <h2 id="lastName">아직 없음</h2>
+          <p id="lastDescription">바나나를 수확해서 까면 판매함에 들어가고 도감이 채워집니다.</p>
+        </section>
+
+        <section class="shop-panel">
+          <div class="section-head">
+            <h2>바나나 도감</h2>
+            <span>색깔과 캐릭터</span>
+          </div>
+          <div id="collection" class="collection-grid"></div>
+        </section>
+
+        <section class="shop-panel">
+          <div class="section-head">
+            <h2>작업 로그</h2>
+            <span id="soldCount">0개 판매</span>
+          </div>
+          <ol id="log" class="log"></ol>
+        </section>
+
+        <button id="wipeButton" class="danger" type="button">저장 초기화</button>
+      </aside>
+    </div>
+
+    <script src="game.js?v=banana-mobile-2"></script>
+  </body>
+</html>
