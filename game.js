@@ -19,13 +19,15 @@ const superEtaEl = document.getElementById("superEta");
 const soldCountEl = document.getElementById("soldCount");
 const wipeButton = document.getElementById("wipeButton");
 const sellButton = document.getElementById("sellButton");
-const seedButton = document.getElementById("seedButton");
 const touchActionButton = document.getElementById("touchActionButton");
 const shopButtons = Array.from(document.querySelectorAll(".shop-btn"));
 const upgradeButtons = Array.from(document.querySelectorAll(".upgrade-btn"));
 const openUpgradeButton = document.getElementById("openUpgradeButton");
 const closeUpgradeButton = document.getElementById("closeUpgradeButton");
 const upgradeOverlay = document.getElementById("upgradeOverlay");
+const openCollectionButton = document.getElementById("openCollectionButton");
+const closeCollectionButton = document.getElementById("closeCollectionButton");
+const collectionOverlay = document.getElementById("collectionOverlay");
 
 const SAVE_KEY = "banana-idle-farm-v3";
 const SUPER_TARGET_MS = 2 * 60 * 60 * 1000;
@@ -82,8 +84,8 @@ const automationDefs = {
 };
 
 const farmUpgradeDefs = {
-  banana: { name: "바나나 레벨", basePrice: 90, maxLevel: 10, desc: "깐 바나나 판매가 상승" },
-  seedling: { name: "묘목 레벨", basePrice: 120, maxLevel: 10, desc: "새 나무의 좋은 바나나 확률 상승" },
+  banana: { name: "판매가 레벨", icon: "🍌", basePrice: 90, maxLevel: 10, desc: "깐 바나나를 팔 때 받는 코인 상승" },
+  seedling: { name: "묘목 레벨", icon: "🌱", basePrice: 120, maxLevel: 10, desc: "새 나무의 좋은 바나나 확률 상승" },
 };
 
 const seedlingLooks = [
@@ -102,7 +104,6 @@ const seedlingLooks = [
 const state = {
   selectedTool: "move",
   coins: 12,
-  seeds: 6,
   bananaLevel: 1,
   seedlingLevel: 1,
   totalPeels: 0,
@@ -270,6 +271,10 @@ function isShowcasePeel(variant) {
   return variant.rarity === "rare" || variant.rarity === "epic" || variant.rarity === "legendary";
 }
 
+function shouldShowcasePeel(variant) {
+  return isShowcasePeel(variant) && !state.collection[variant.id];
+}
+
 function itemVariant(item) {
   return variantMap[item?.variantId] || variants[0];
 }
@@ -332,8 +337,7 @@ function addWorkTime(seconds) {
 
 function plantTile(index) {
   const tile = state.tiles[index];
-  if (!tile || !tile.tilled || tile.plant || state.seeds <= 0) return false;
-  state.seeds -= 1;
+  if (!tile || !tile.tilled || tile.plant) return false;
   tile.plant = {
     growth: 0.08,
     water: 0,
@@ -443,10 +447,6 @@ function applyTileAction(index, tool = state.selectedTool, workSeconds = 0.6, so
     }
     if (tile.plant) {
       setMessage("이미 바나나 나무가 자라고 있습니다.");
-      return false;
-    }
-    if (state.seeds <= 0) {
-      setMessage("묘목 재고가 없습니다. 바나나를 3개 까면 묘목 재고가 1개 늘어납니다.");
       return false;
     }
     plantTile(index);
@@ -577,7 +577,7 @@ function peelWork(seconds, source = "manual") {
     const color = item.progress > 0.45 ? variant.color : "#ffd84a";
     const count = variant.rarity === "legendary" ? 12 : variant.rarity === "epic" ? 9 : variant.rarity === "rare" ? 7 : 4;
     if (Math.random() < 0.55) burst(peelStation.x + 6 - Math.random() * 12, peelStation.y - 44 + Math.random() * 10, color, count);
-    if (isShowcasePeel(variant) && Math.random() < 0.7) burst(W / 2 + Math.random() * 34 - 17, H / 2 - 34 + Math.random() * 22, color, count + 5);
+    if (shouldShowcasePeel(variant) && Math.random() < 0.7) burst(W / 2 + Math.random() * 34 - 17, H / 2 - 34 + Math.random() * 22, color, count + 5);
   }
   if (item.progress >= 1) finishPeel(source);
   saveGame();
@@ -601,7 +601,6 @@ function finishPeel(source = "manual") {
   state.totalPeels += 1;
   state.sellCrate.push(variant.id);
   state.collection[variant.id] = (state.collection[variant.id] || 0) + 1;
-  if (state.totalPeels % 3 === 0) state.seeds += 1;
 
   lastNameEl.textContent = variant.name;
   lastNameEl.style.color = rarityMeta[variant.rarity].color;
@@ -609,7 +608,7 @@ function finishPeel(source = "manual") {
   addLog(first ? `신규 발견: ${variant.name}` : `${variant.name} 판매함에 추가`);
   setMessage(first ? `${variant.name} 발견. 판매함에 넣었습니다.` : `${variant.name} 하나 더 깠습니다.`);
   burst(peelStation.x, peelStation.y - 36, variant.color, variant.id === "super" ? 120 : 42);
-  if (isShowcasePeel(variant)) {
+  if (isShowcasePeel(variant) && first) {
     resultReveal = { variantId: variant.id, life: 2.5, maxLife: 2.5, first };
   }
   renderCollection();
@@ -663,7 +662,7 @@ function nextFarmTask() {
     (tile) => tile.plant?.growth >= 1 && tile.plant.fruit,
     (_tile, index) => canReplantTile(index),
     (tile) => tile.plant && (tile.plant.growth < 1 || tile.plant.water < 2),
-    (tile) => tile.tilled && !tile.plant && state.seeds > 0,
+    (tile) => tile.tilled && !tile.plant,
     (tile) => !tile.tilled && !tile.plant,
   ];
 
@@ -802,7 +801,7 @@ function buyFarmUpgrade(id) {
   if (id === "banana") state.bananaLevel += 1;
   if (id === "seedling") state.seedlingLevel += 1;
   addLog(`${def.name} Lv.${level + 1} 달성`);
-  setMessage(id === "seedling" ? `묘목 Lv.${state.seedlingLevel}. 새로 심거나 재식재한 나무부터 적용됩니다.` : `바나나 Lv.${state.bananaLevel}. 판매가가 올라갑니다.`);
+  setMessage(id === "seedling" ? `묘목 Lv.${state.seedlingLevel}. 새로 심거나 재식재한 나무부터 적용됩니다.` : `판매가 Lv.${state.bananaLevel}. 깐 바나나 판매가가 올라갑니다.`);
   saveGame();
   updateHud();
 }
@@ -827,10 +826,6 @@ function buyAutomation(id) {
   setMessage(`${def.name}을 설치했습니다. 이제 조금씩 알아서 굴러갑니다.`);
   saveGame();
   updateHud();
-}
-
-function buySeeds() {
-  buyFarmUpgrade("seedling");
 }
 
 function runTimedAutomation(id, dt, action) {
@@ -860,7 +855,7 @@ function updateAutomation(dt) {
 
   runTimedAutomation("planter", dt, () => {
     const index = state.tiles.findIndex((tile) => tile.tilled && !tile.plant);
-    if (index < 0 || state.seeds <= 0) return false;
+    if (index < 0) return false;
     plantTile(index);
     addWorkTime(0.25);
     addFloater("AUTO", tileCenter(index).x, tileCenter(index).y - 18, "#1f8b5f");
@@ -1648,7 +1643,7 @@ function drawPeelingBanana(x, y, progress, variant) {
 function drawShowcasePeelOverlay() {
   if (!state.currentPeel) return;
   const variant = itemVariant(state.currentPeel);
-  if (!isShowcasePeel(variant)) return;
+  if (!shouldShowcasePeel(variant)) return;
 
   const progress = state.currentPeel.progress;
   const now = performance.now();
@@ -1798,7 +1793,7 @@ function drawResultRevealOverlay() {
   ctx.textBaseline = "middle";
   ctx.fillStyle = meta.color;
   ctx.font = "950 17px Inter, system-ui, sans-serif";
-  ctx.fillText(resultReveal.first ? "신규 발견" : "또 발견", cx, cy + 88);
+  ctx.fillText("신규 발견", cx, cy + 88);
   ctx.fillStyle = "#202431";
   ctx.font = "950 34px Inter, system-ui, sans-serif";
   ctx.fillText(variant.name, cx, cy + 122);
@@ -2051,10 +2046,11 @@ function drawHud() {
   ctx.fill();
   ctx.fillStyle = "#fff";
   ctx.font = "950 18px Inter, system-ui, sans-serif";
-  ctx.fillText(`바나나 Lv.${state.bananaLevel}   묘목 Lv.${state.seedlingLevel}   묘목재고 ${state.seeds}   물 Lv.${automationLevel("sprinkler")}`, 46, 51);
+  ctx.fillText(`🍌 판매가 Lv.${state.bananaLevel}   🌱 묘목 Lv.${state.seedlingLevel}   🎒 ${state.bag.length}/${bagLimit}   📦 ${state.sellCrate.length}개`, 46, 51);
   ctx.font = "850 13px Inter, system-ui, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.84)";
-  ctx.fillText(`괭이 Lv.${automationLevel("tiller")}   심기 Lv.${automationLevel("planter")}   수확 Lv.${automationLevel("harvester")}   까기 Lv.${automationLevel("peeler")}   판매 Lv.${automationLevel("seller")}`, 46, 78);
+  const totalAutomation = Object.values(state.automation).reduce((sum, item) => sum + (item.level || 0), 0);
+  ctx.fillText(`자동화 총 Lv.${totalAutomation}   슈퍼바나나 게이지 ${Math.round(superProgress() * 100)}%`, 46, 78);
 
   ctx.fillStyle = "rgba(32,36,49,0.82)";
   roundedRect(268, 574, 424, 44, 8);
@@ -2175,9 +2171,6 @@ function updateHud() {
   touchActionButton.textContent = touchActionText();
   touchActionButton.setAttribute("aria-label", `${touchActionText()} 버튼`);
   soldCountEl.textContent = `${state.totalSold.toLocaleString("ko-KR")}개 판매`;
-  const seedlingPrice = farmUpgradePrice("seedling");
-  seedButton.textContent = state.seedlingLevel >= farmUpgradeDefs.seedling.maxLevel ? "묘목 최대 레벨" : `묘목 레벨업 (${seedlingPrice}C)`;
-  seedButton.disabled = state.seedlingLevel >= farmUpgradeDefs.seedling.maxLevel || state.coins < seedlingPrice;
   sellButton.disabled = state.sellCrate.length === 0;
 
   for (const button of upgradeButtons) {
@@ -2189,7 +2182,7 @@ function updateHud() {
     const extra = id === "seedling" ? `재식재 비용 ${replantCost()}C` : `판매가 x${bananaValueMultiplier().toFixed(2)}`;
     button.disabled = maxed || state.coins < price;
     button.innerHTML = `
-      <strong>${def.name} Lv.${level}</strong>
+      <strong>${def.icon || ""} ${def.name} Lv.${level}</strong>
       <span>${def.desc}</span>
       <span>${extra}</span>
       <small>${maxed ? "최대 레벨" : `${price}코인`}</small>
@@ -2252,7 +2245,6 @@ function saveGame() {
   const payload = {
     selectedTool: state.selectedTool,
     coins: state.coins,
-    seeds: state.seeds,
     bananaLevel: state.bananaLevel,
     seedlingLevel: state.seedlingLevel,
     totalPeels: state.totalPeels,
@@ -2289,7 +2281,6 @@ function loadGame() {
     const parsed = JSON.parse(raw);
     state.selectedTool = "move";
     state.coins = Math.max(0, Number(parsed.coins) || 0);
-    state.seeds = Math.max(0, Number(parsed.seeds) || 0);
     state.bananaLevel = clamp(Number(parsed.bananaLevel) || 1, 1, farmUpgradeDefs.banana.maxLevel);
     state.seedlingLevel = clamp(Number(parsed.seedlingLevel) || 1, 1, farmUpgradeDefs.seedling.maxLevel);
     state.totalPeels = Math.max(0, Number(parsed.totalPeels) || 0);
@@ -2345,7 +2336,6 @@ function resetGame() {
   localStorage.removeItem(SAVE_KEY);
   state.selectedTool = "move";
   state.coins = 12;
-  state.seeds = 6;
   state.bananaLevel = 1;
   state.seedlingLevel = 1;
   state.totalPeels = 0;
@@ -2372,7 +2362,7 @@ function resetGame() {
   renderCollection();
   renderLog();
   updateHud();
-  setMessage(`농장 초기화 완료. 묘목은 심을 때 1개씩 쓰고, 수확 가방은 ${bagLimit}칸입니다.`);
+  setMessage(`농장 초기화 완료. 묘목은 무제한이고, 수확 가방은 ${bagLimit}칸입니다.`);
 }
 
 function canvasPoint(event) {
@@ -2478,8 +2468,17 @@ openUpgradeButton.addEventListener("click", () => {
   upgradeOverlay.hidden = false;
 });
 
+openCollectionButton.addEventListener("click", () => {
+  collectionOverlay.hidden = false;
+});
+
 closeUpgradeButton.addEventListener("click", () => {
   upgradeOverlay.hidden = true;
+  focusGame();
+});
+
+closeCollectionButton.addEventListener("click", () => {
+  collectionOverlay.hidden = true;
   focusGame();
 });
 
@@ -2490,8 +2489,14 @@ upgradeOverlay.addEventListener("click", (event) => {
   }
 });
 
+collectionOverlay.addEventListener("click", (event) => {
+  if (event.target === collectionOverlay) {
+    collectionOverlay.hidden = true;
+    focusGame();
+  }
+});
+
 sellButton.addEventListener("click", () => sellSome());
-seedButton.addEventListener("click", buySeeds);
 
 wipeButton.addEventListener("click", () => {
   if (window.confirm("저장된 바나나 밭을 초기화할까요?")) resetGame();
@@ -2518,9 +2523,10 @@ function shouldRunSpaceAction(event, wasActionHeld) {
 }
 
 function handleKeyDown(event) {
-  if (event.code === "Escape" && !upgradeOverlay.hidden) {
+  if (event.code === "Escape" && (!upgradeOverlay.hidden || !collectionOverlay.hidden)) {
     event.preventDefault();
     upgradeOverlay.hidden = true;
+    collectionOverlay.hidden = true;
     focusGame();
     return;
   }
@@ -2569,6 +2575,6 @@ loadGame();
 renderCollection();
 renderLog();
 updateHud();
-setMessage(`초반은 손으로 갈고 심고 물 주고 수확합니다. 묘목은 심을 때 1개씩 쓰고, 가방은 ${bagLimit}칸입니다.`);
+setMessage(`초반은 손으로 갈고 심고 물 주고 수확합니다. 묘목은 무제한이고, 가방은 ${bagLimit}칸입니다.`);
 focusGame();
 requestAnimationFrame(frame);

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>바나나 밭</title>
-    <link rel="stylesheet" href="styles.css?v=banana-mobile-2" />
+    <link rel="stylesheet" href="styles.css?v=banana-ui-3" />
   </head>
   <body>
     <main class="app">
@@ -15,32 +15,53 @@
         </div>
         <div class="top-actions">
           <div class="stats" aria-label="게임 상태">
-            <div class="stat" title="코인" aria-label="코인">
+            <div class="stat" title="현재 보유 코인" aria-label="현재 보유 코인">
               <span class="stat-icon" aria-hidden="true">C</span>
-              <strong id="coins">0</strong>
+              <span class="stat-copy">
+                <span class="stat-label">코인</span>
+                <strong id="coins">0</strong>
+              </span>
             </div>
-            <div class="stat" title="깐 바나나" aria-label="깐 바나나">
-              <span class="stat-icon" aria-hidden="true">◒</span>
-              <strong id="totalPeels">0</strong>
+            <div class="stat" title="직접 깐 바나나 수" aria-label="직접 깐 바나나 수">
+              <span class="stat-icon" aria-hidden="true">🍌</span>
+              <span class="stat-copy">
+                <span class="stat-label">깐 수</span>
+                <strong id="totalPeels">0</strong>
+              </span>
             </div>
-            <div class="stat" title="판매함" aria-label="판매함">
-              <span class="stat-icon" aria-hidden="true">$</span>
-              <strong id="sellCrate">0개</strong>
+            <div class="stat" title="팔 준비가 된 바나나" aria-label="팔 준비가 된 바나나">
+              <span class="stat-icon" aria-hidden="true">₩</span>
+              <span class="stat-copy">
+                <span class="stat-label">판매함</span>
+                <strong id="sellCrate">0개</strong>
+              </span>
             </div>
             <div class="stat" title="가방: 수확 바나나 18칸 한도" aria-label="가방: 수확 바나나 18칸 한도">
-              <span class="stat-icon" aria-hidden="true">▣</span>
-              <strong id="streak">0/18</strong>
+              <span class="stat-icon" aria-hidden="true">🎒</span>
+              <span class="stat-copy">
+                <span class="stat-label">가방</span>
+                <strong id="streak">0/18</strong>
+              </span>
             </div>
             <div class="stat" title="도감" aria-label="도감">
-              <span class="stat-icon" aria-hidden="true">★</span>
-              <strong id="collectionCount">0/18</strong>
+              <span class="stat-icon" aria-hidden="true">📖</span>
+              <span class="stat-copy">
+                <span class="stat-label">도감</span>
+                <strong id="collectionCount">0/18</strong>
+              </span>
             </div>
             <div class="stat" title="자동화 총 레벨" aria-label="자동화 총 레벨">
               <span class="stat-icon" aria-hidden="true">⚙</span>
-              <strong id="automationCount">0단계</strong>
+              <span class="stat-copy">
+                <span class="stat-label">자동화</span>
+                <strong id="automationCount">0단계</strong>
+              </span>
             </div>
           </div>
-          <button id="openUpgradeButton" class="open-upgrade" type="button">업그레이드</button>
+          <div class="top-buttons">
+            <button id="openUpgradeButton" class="top-button open-upgrade" type="button">업그레이드</button>
+            <button id="openCollectionButton" class="top-button open-collection" type="button">도감</button>
+          </div>
         </div>
       </header>
 
@@ -70,7 +91,7 @@
     </main>
 
     <div id="upgradeOverlay" class="upgrade-overlay" hidden>
-      <aside class="side-panel upgrade-modal" aria-label="업그레이드와 기록">
+      <aside class="side-panel upgrade-modal" aria-label="업그레이드">
         <div class="upgrade-title">
           <div>
             <p class="eyebrow">Farm Control</p>
@@ -83,18 +104,17 @@
 
         <section class="shop-panel market-panel">
           <div class="section-head">
-            <h2>판매와 묘목</h2>
+            <h2>판매</h2>
             <span id="saveState">자동 저장</span>
           </div>
           <div class="market-row">
             <button id="sellButton" type="button">판매함 전부 팔기</button>
-            <button id="seedButton" type="button">묘목 레벨업</button>
           </div>
           <div class="limit-row" aria-label="보관 한도">
             <span>가방 18칸</span>
-            <span>묘목 재고는 심으면 1개 사용</span>
-            <span>바나나 3개 까면 묘목 +1</span>
-            <span>묘목 레벨은 새로 심는 나무부터 적용</span>
+            <span>묘목은 무제한</span>
+            <span>갈린 칸에는 바로 심기 가능</span>
+            <span>묘목 레벨은 새 나무부터 적용</span>
             <span>기존 나무는 재식재 비용 필요</span>
           </div>
         </section>
@@ -125,20 +145,6 @@
           </div>
         </section>
 
-        <section class="recent-panel">
-          <p class="panel-label">방금 깐 바나나</p>
-          <h2 id="lastName">아직 없음</h2>
-          <p id="lastDescription">바나나를 수확해서 까면 판매함에 들어가고 도감이 채워집니다.</p>
-        </section>
-
-        <section class="shop-panel">
-          <div class="section-head">
-            <h2>바나나 도감</h2>
-            <span>색깔과 캐릭터</span>
-          </div>
-          <div id="collection" class="collection-grid"></div>
-        </section>
-
         <section class="shop-panel">
           <div class="section-head">
             <h2>작업 로그</h2>
@@ -151,6 +157,32 @@
       </aside>
     </div>
 
-    <script src="game.js?v=banana-mobile-2"></script>
+    <div id="collectionOverlay" class="upgrade-overlay collection-overlay" hidden>
+      <aside class="side-panel collection-modal" aria-label="바나나 도감">
+        <div class="upgrade-title">
+          <div>
+            <p class="eyebrow">Banana Collection</p>
+            <h2>바나나 도감</h2>
+          </div>
+          <button id="closeCollectionButton" type="button">닫기</button>
+        </div>
+
+        <section class="recent-panel">
+          <p class="panel-label">방금 깐 바나나</p>
+          <h2 id="lastName">아직 없음</h2>
+          <p id="lastDescription">바나나를 수확해서 까면 판매함에 들어가고 도감이 채워집니다.</p>
+        </section>
+
+        <section class="shop-panel">
+          <div class="section-head">
+            <h2>컬렉션</h2>
+            <span>처음 발견한 희귀 바나나만 크게 연출됨</span>
+          </div>
+          <div id="collection" class="collection-grid"></div>
+        </section>
+      </aside>
+    </div>
+
+    <script src="game.js?v=banana-ui-3"></script>
   </body>
 </html>
