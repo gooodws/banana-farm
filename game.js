@@ -44,8 +44,8 @@ let canvasResolutionCheckAt = 0;
 
 const tileSize = 78;
 const farm = { x: 96, y: 132, cols: 4, rows: 5 };
-const peelStation = { x: 790, y: 432, r: 76 };
-const market = { x: 782, y: 220, r: 72 };
+const peelStation = { x: 700, y: 428, r: 82 };
+const market = { x: 690, y: 246, r: 78 };
 const bagLimit = 18;
 const seedPackPrice = 18;
 const replantBaseCost = 12;
@@ -195,6 +195,14 @@ function tileCenter(index) {
   };
 }
 
+function tileWorkSpot(index) {
+  const center = tileCenter(index);
+  return {
+    x: center.x - 22,
+    y: center.y + 24,
+  };
+}
+
 function tileAt(x, y) {
   const col = Math.floor((x - farm.x) / tileSize);
   const row = Math.floor((y - farm.y) / tileSize);
@@ -204,8 +212,8 @@ function tileAt(x, y) {
 
 function atTileWorkSpot(index) {
   if (index < 0) return false;
-  const center = tileCenter(index);
-  return distance(state.player.x, state.player.y, center.x, center.y) < 8;
+  const spot = tileWorkSpot(index);
+  return distance(state.player.x, state.player.y, spot.x, spot.y) < 8;
 }
 
 function atPeelStation() {
@@ -574,12 +582,12 @@ function applyTileAction(index, tool = state.selectedTool, workSeconds = 0.6, so
 
 function requestTileAction(index, tool = state.selectedTool, workSeconds = 0.6) {
   if (index < 0) return false;
-  const center = tileCenter(index);
+  const spot = tileWorkSpot(index);
   if (atTileWorkSpot(index)) {
     return applyTileAction(index, tool, workSeconds);
   }
   queuedAction = { type: "tile", index, tool, workSeconds };
-  setMoveTarget(center.x, center.y);
+  setMoveTarget(spot.x, spot.y);
   setMessage("그 칸으로 이동 중입니다.");
   return true;
 }
@@ -701,7 +709,8 @@ function nextToolForTile(index) {
   return null;
 }
 
-function nextFarmTask() {
+function nextFarmTask(options = {}) {
+  const currentIndex = currentPlayerTile();
   const priorities = [
     (tile) => tile.plant?.growth >= 1 && tile.plant.fruit,
     (_tile, index) => canReplantTile(index),
@@ -711,17 +720,20 @@ function nextFarmTask() {
   ];
 
   for (const predicate of priorities) {
-    let best = null;
+    const candidates = [];
     for (let index = 0; index < state.tiles.length; index += 1) {
       const tile = state.tiles[index];
       if (!predicate(tile, index)) continue;
-      const center = tileCenter(index);
-      const dist = distance(state.player.x, state.player.y, center.x, center.y);
-      if (!best || dist < best.dist) {
-        best = { index, tool: nextToolForTile(index), dist };
-      }
+      const spot = tileWorkSpot(index);
+      const dist = distance(state.player.x, state.player.y, spot.x, spot.y);
+      candidates.push({ index, tool: nextToolForTile(index), dist });
     }
-    if (best?.tool) return best;
+    candidates.sort((a, b) => a.dist - b.dist);
+    if (options.preferMovement && candidates.length > 1) {
+      const movingTarget = candidates.find((candidate) => candidate.index !== currentIndex || !atTileWorkSpot(candidate.index));
+      if (movingTarget?.tool) return movingTarget;
+    }
+    if (candidates[0]?.tool) return candidates[0];
   }
   return null;
 }
@@ -729,18 +741,18 @@ function nextFarmTask() {
 function performFarmButtonAction() {
   if (queuedAction?.type === "tile") return true;
 
+  const task = nextFarmTask({ preferMovement: true });
+  if (task) {
+    state.selectedTool = task.tool;
+    requestTileAction(task.index, task.tool);
+    return true;
+  }
+
   const current = currentPlayerTile();
   const currentTool = nextToolForTile(current);
   if (currentTool) {
     state.selectedTool = currentTool;
     return requestTileAction(current, currentTool, 0.72);
-  }
-
-  const task = nextFarmTask();
-  if (task) {
-    state.selectedTool = task.tool;
-    requestTileAction(task.index, task.tool);
-    return true;
   }
 
   setMessage("농장에 지금 할 일이 없습니다. 까기대와 판매대는 직접 눌러주세요.");
@@ -1058,16 +1070,16 @@ function drawBackground() {
   ctx.fillStyle = "#caa36a";
   ctx.beginPath();
   ctx.moveTo(610, H);
-  ctx.quadraticCurveTo(725, 430, market.x, market.y + 32);
-  ctx.quadraticCurveTo(835, 390, 905, H);
+  ctx.quadraticCurveTo(650, 430, market.x, market.y + 32);
+  ctx.quadraticCurveTo(778, 400, 860, H);
   ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = "#b58a58";
   ctx.beginPath();
   ctx.moveTo(520, H);
-  ctx.quadraticCurveTo(630, 520, peelStation.x, peelStation.y + 35);
-  ctx.quadraticCurveTo(880, 520, 940, H);
+  ctx.quadraticCurveTo(575, 520, peelStation.x, peelStation.y + 35);
+  ctx.quadraticCurveTo(760, 520, 860, H);
   ctx.closePath();
   ctx.fill();
 }
@@ -2075,11 +2087,11 @@ function actionText() {
 }
 
 function touchActionText() {
+  const task = nextFarmTask();
+  if (task?.tool) return toolLabel(task.tool);
   const index = currentPlayerTile();
   const tool = nextToolForTile(index);
   if (tool) return toolLabel(tool);
-  const task = nextFarmTask();
-  if (task?.tool) return toolLabel(task.tool);
   return "농장";
 }
 
