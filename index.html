@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>바나나 밭</title>
-    <link rel="stylesheet" href="styles.css?v=banana-move-4" />
+    <link rel="stylesheet" href="styles.css?v=banana-growth-5" />
   </head>
   <body>
     <main class="app">
@@ -64,6 +64,24 @@
           </div>
         </div>
       </header>
+
+      <section class="growth-card" aria-label="농장 성장 단계">
+        <div class="growth-main">
+          <span class="growth-badge" id="rankBadge">Lv.1</span>
+          <div>
+            <p class="growth-label">현재 농장</p>
+            <strong id="rankName">손바닥 바나나밭</strong>
+          </div>
+        </div>
+        <p id="rankDesc" class="growth-desc">손으로 갈고 심고 수확해서 첫 자동화를 노립니다.</p>
+        <div class="growth-meta">
+          <span id="incomeRate">판매가 x1.00</span>
+          <span id="nextGoal">다음 목표: 50코인 벌기</span>
+        </div>
+        <div class="rank-meter" aria-label="다음 성장 단계 진행도">
+          <div id="rankGauge" class="rank-fill"></div>
+        </div>
+      </section>
 
       <section class="layout">
         <section class="stage-panel" aria-label="바나나 농장 게임">
@@ -183,6 +201,6 @@
       </aside>
     </div>
 
-    <script src="game.js?v=banana-move-4"></script>
+    <script src="game.js?v=banana-growth-5"></script>
   </body>
 </html>

@@ -17,6 +17,12 @@ const logEl = document.getElementById("log");
 const saveStateEl = document.getElementById("saveState");
 const superEtaEl = document.getElementById("superEta");
 const soldCountEl = document.getElementById("soldCount");
+const rankBadgeEl = document.getElementById("rankBadge");
+const rankNameEl = document.getElementById("rankName");
+const rankDescEl = document.getElementById("rankDesc");
+const incomeRateEl = document.getElementById("incomeRate");
+const nextGoalEl = document.getElementById("nextGoal");
+const rankGaugeEl = document.getElementById("rankGauge");
 const wipeButton = document.getElementById("wipeButton");
 const sellButton = document.getElementById("sellButton");
 const touchActionButton = document.getElementById("touchActionButton");
@@ -87,6 +93,17 @@ const farmUpgradeDefs = {
   banana: { name: "판매가 레벨", icon: "🍌", basePrice: 90, maxLevel: 10, desc: "깐 바나나를 팔 때 받는 코인 상승" },
   seedling: { name: "묘목 레벨", icon: "🌱", basePrice: 120, maxLevel: 10, desc: "새 나무의 좋은 바나나 확률 상승" },
 };
+
+const rankDefs = [
+  { name: "손바닥 바나나밭", threshold: 0, desc: "손으로 갈고 심고 수확해서 첫 자동화를 노립니다." },
+  { name: "동네 바나나 노점", threshold: 80, desc: "수확한 바나나가 동네에서 슬슬 팔리기 시작합니다." },
+  { name: "작은 자동화 농장", threshold: 260, desc: "장비가 하나씩 붙으면서 손이 조금씩 편해집니다." },
+  { name: "바나나 작업장", threshold: 760, desc: "까기와 판매 루프가 돌아가며 돈맛이 나기 시작합니다." },
+  { name: "희귀 바나나 연구소", threshold: 1800, desc: "묘목 개량으로 특이한 바나나가 더 자주 나옵니다." },
+  { name: "바나나 체인 1호점", threshold: 4200, desc: "수동 농장이 아니라 사업처럼 굴러가기 시작합니다." },
+  { name: "바나나 재벌 견습", threshold: 9200, desc: "자동화가 농장을 먹여 살리고, 플레이어는 희귀만 기다립니다." },
+  { name: "슈퍼바나나 기업", threshold: 20000, desc: "이제 목표는 하나입니다. 전설 바나나를 계속 찍어내기." },
+];
 
 const seedlingLooks = [
   { trunk: "#7b512b", trunk2: "#a96a38", leaf: "#238b58", leaf2: "#36b66b", accent: "#ffd84a", leafCount: 5, height: 0.9, spread: 0.88, fruit: "#ffe36e" },
@@ -291,6 +308,33 @@ function createItem(variant) {
 
 function bananaValueMultiplier() {
   return 1 + (state.bananaLevel - 1) * 0.14;
+}
+
+function totalAutomationLevel() {
+  return Object.values(state.automation).reduce((sum, item) => sum + (item.level || 0), 0);
+}
+
+function collectionFoundCount() {
+  return variants.filter((variant) => state.collection[variant.id]).length;
+}
+
+function farmScore() {
+  return Math.floor(state.revenue + state.totalPeels * 4 + totalAutomationLevel() * 35 + collectionFoundCount() * 18);
+}
+
+function currentRank() {
+  const score = farmScore();
+  let rank = rankDefs[0];
+  let index = 0;
+  for (let i = 0; i < rankDefs.length; i += 1) {
+    if (score >= rankDefs[i].threshold) {
+      rank = rankDefs[i];
+      index = i;
+    }
+  }
+  const next = rankDefs[index + 1] || null;
+  const progress = next ? clamp((score - rank.threshold) / (next.threshold - rank.threshold), 0, 1) : 1;
+  return { rank, index, next, progress, score };
 }
 
 function superProgress() {
@@ -2049,8 +2093,7 @@ function drawHud() {
   ctx.fillText(`🍌 판매가 Lv.${state.bananaLevel}   🌱 묘목 Lv.${state.seedlingLevel}   🎒 ${state.bag.length}/${bagLimit}   📦 ${state.sellCrate.length}개`, 46, 51);
   ctx.font = "850 13px Inter, system-ui, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.84)";
-  const totalAutomation = Object.values(state.automation).reduce((sum, item) => sum + (item.level || 0), 0);
-  ctx.fillText(`자동화 총 Lv.${totalAutomation}   슈퍼바나나 게이지 ${Math.round(superProgress() * 100)}%`, 46, 78);
+  ctx.fillText(`자동화 총 Lv.${totalAutomationLevel()}   슈퍼바나나 게이지 ${Math.round(superProgress() * 100)}%`, 46, 78);
 
   ctx.fillStyle = "rgba(32,36,49,0.82)";
   roundedRect(268, 574, 424, 44, 8);
@@ -2155,10 +2198,11 @@ function frame(now) {
 }
 
 function updateHud() {
-  const found = variants.filter((variant) => state.collection[variant.id]).length;
+  const found = collectionFoundCount();
   const progress = superProgress();
   const remainMs = Math.max(0, SUPER_TARGET_MS - state.superChargeMs);
-  const totalAutomation = Object.values(state.automation).reduce((sum, item) => sum + (item.level || 0), 0);
+  const totalAutomation = totalAutomationLevel();
+  const rankState = currentRank();
 
   coinsEl.textContent = state.coins.toLocaleString("ko-KR");
   totalPeelsEl.textContent = state.totalPeels.toLocaleString("ko-KR");
@@ -2168,6 +2212,12 @@ function updateHud() {
   automationCountEl.textContent = `${totalAutomation}단계`;
   superGaugeEl.style.width = `${progress * 100}%`;
   superEtaEl.textContent = progress >= 1 ? "다음 수확 보장" : `슈퍼까지 약 ${Math.ceil(remainMs / 60000)}분`;
+  rankBadgeEl.textContent = `Lv.${rankState.index + 1}`;
+  rankNameEl.textContent = rankState.rank.name;
+  rankDescEl.textContent = rankState.rank.desc;
+  incomeRateEl.textContent = `판매가 x${bananaValueMultiplier().toFixed(2)} · 자동 Lv.${totalAutomation}`;
+  nextGoalEl.textContent = rankState.next ? `다음: ${rankState.next.name} (${Math.ceil((rankState.next.threshold - rankState.score) / 10) * 10}점)` : "최종 단계 도달";
+  rankGaugeEl.style.width = `${rankState.progress * 100}%`;
   touchActionButton.textContent = touchActionText();
   touchActionButton.setAttribute("aria-label", `${touchActionText()} 버튼`);
   soldCountEl.textContent = `${state.totalSold.toLocaleString("ko-KR")}개 판매`;
