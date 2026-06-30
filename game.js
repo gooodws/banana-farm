@@ -185,10 +185,10 @@ function tileAt(x, y) {
   return row * farm.cols + col;
 }
 
-function inReach(index) {
+function atTileWorkSpot(index) {
   if (index < 0) return false;
   const center = tileCenter(index);
-  return distance(state.player.x, state.player.y, center.x, center.y) < 58;
+  return distance(state.player.x, state.player.y, center.x, center.y) < 8;
 }
 
 function atPeelStation() {
@@ -528,13 +528,13 @@ function applyTileAction(index, tool = state.selectedTool, workSeconds = 0.6, so
   return false;
 }
 
-function requestTileAction(index, tool = state.selectedTool) {
+function requestTileAction(index, tool = state.selectedTool, workSeconds = 0.6) {
   if (index < 0) return false;
   const center = tileCenter(index);
-  if (inReach(index)) {
-    return applyTileAction(index, tool);
+  if (atTileWorkSpot(index)) {
+    return applyTileAction(index, tool, workSeconds);
   }
-  queuedAction = { type: "tile", index, tool };
+  queuedAction = { type: "tile", index, tool, workSeconds };
   setMoveTarget(center.x, center.y);
   setMessage("그 칸으로 이동 중입니다.");
   return true;
@@ -689,7 +689,7 @@ function performFarmButtonAction() {
   const currentTool = nextToolForTile(current);
   if (currentTool) {
     state.selectedTool = currentTool;
-    return applyTileAction(current, currentTool, 0.72);
+    return requestTileAction(current, currentTool, 0.72);
   }
 
   const task = nextFarmTask();
@@ -717,7 +717,7 @@ function performCurrentTileAction() {
   const tool = nextToolForTile(index);
   if (tool) {
     state.selectedTool = tool;
-    applyTileAction(index, tool, 0.75);
+    requestTileAction(index, tool, 0.75);
     return;
   }
 
@@ -744,8 +744,8 @@ function performContextAction() {
 
 function updateQueuedAction() {
   if (!queuedAction) return;
-  if (queuedAction.type === "tile" && inReach(queuedAction.index)) {
-    applyTileAction(queuedAction.index, queuedAction.tool);
+  if (queuedAction.type === "tile" && atTileWorkSpot(queuedAction.index)) {
+    applyTileAction(queuedAction.index, queuedAction.tool, queuedAction.workSeconds || 0.6);
     queuedAction = null;
   }
   if (queuedAction?.type === "peel" && atPeelStation()) {
